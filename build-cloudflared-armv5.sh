@@ -39,8 +39,4 @@ tar czf "../$GO_TARBALL" .
 
 cd ..
 
-echo "Step 5: Build Docker image using the prebuilt Go toolchain"
-docker buildx build --platform linux/arm/v5 -t "$DOCKER_IMAGE_NAME" --load .
-
-echo "Build complete. You can run the container with:"
-echo "docker run -e TUNNEL_TOKEN=\"your_actual_tunnel_token_here\" $DOCKER_IMAGE_NAME"
+echo "Go toolchain build complete."

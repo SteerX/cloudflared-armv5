@@ -28,6 +28,7 @@ jobs:
         run: |
           python - <<EOF
           import requests
+          import os
 
           response = requests.get('https://api.github.com/repos/cloudflare/cloudflared/releases/latest')
           latest_version = response.json()['tag_name']
@@ -36,14 +37,11 @@ jobs:
               current_version = f.read().strip()
 
           if latest_version != current_version:
-              print(f'::set-output name=new_version::{latest_version}')
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
+                  print(f'new_version={latest_version}', file=gh_out)
           else:
               print('No new version found.')
           EOF
-
-      - name: Download Go tarball
-        run: |
-          curl -L -o go1.22-armv5.tar.gz https://github.com/SteerX/cloudflared-armv5/releases/download/init/go1.22-armv5.tar.gz
 
       # Enable QEMU for ARM emulation in Buildx
       - name: Set up QEMU
@@ -52,6 +50,17 @@ jobs:
       - name: Set up Docker Buildx
         if: steps.check_release.outputs.new_version
         uses: docker/setup-buildx-action@v3
+
+      - name: Install build tools for Go cross-compilation
+        if: steps.check_release.outputs.new_version
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabi curl git tar
+
+      - name: Build Go ARMv5 toolchain (if needed)
+        if: steps.check_release.outputs.new_version
+        run: |
+          bash build-cloudflared-armv5.sh
 
       - name: Login to Docker Hub
         if: steps.check_release.outputs.new_version
@@ -86,27 +95,33 @@ jobs:
       - name: Create tag for release
         if: steps.check_release.outputs.new_version
         run: |
-          git tag ${{ steps.check_release.outputs.new_version }}
-          git push origin ${{ steps.check_release.outputs.new_version }}
+          if ! git rev-parse ${{ steps.check_release.outputs.new_version }} >/dev/null 2>&1; then
+            git tag ${{ steps.check_release.outputs.new_version }}
+            git push origin ${{ steps.check_release.outputs.new_version }}
+          else
+            echo "Tag ${{ steps.check_release.outputs.new_version }} already exists."
+          fi
 
       - name: Create GitHub Release
         if: steps.check_release.outputs.new_version
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check_release.outputs.new_version }}
-          name: "cloudflared ${{ steps.check_release.outputs.new_version }}"
-          body: "Automated release for cloudflared version ${{ steps.check_release.outputs.new_version }}"
+          name: "cloudflared-armv5 ${{ steps.check_release.outputs.new_version }}"
+          body: "Automated release for cloudflared-armv5 version ${{ steps.check_release.outputs.new_version }}"
           draft: false
           prerelease: false
+          overwrite: true
 
       - name: Prepare source archive
         if: steps.check_release.outputs.new_version
         run: |
-          git archive --format=zip --output=cloudflared-${{ steps.check_release.outputs.new_version }}.zip HEAD
+          git archive --format=zip --output=cloudflared-armv5-${{ steps.check_release.outputs.new_version }}.zip HEAD
 
       - name: Upload source archive to release
         if: steps.check_release.outputs.new_version
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check_release.outputs.new_version }}
-          files: cloudflared-${{ steps.check_release.outputs.new_version }}.zip
+          files: cloudflared-armv5-${{ steps.check_release.outputs.new_version }}.zip
+          overwrite: true
