@@ -2,6 +2,8 @@ name: Check for Cloudflared Releases and Build Docker Image
 
 on:
   schedule:
+    - cron: '0 0 * * *' # This runs the workflow daily at midnight
+  workflow_dispatch: # Allows manual triggering
 
 permissions:
   contents: write
