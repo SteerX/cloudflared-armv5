@@ -102,8 +102,20 @@ jobs:
             echo "Tag ${{ steps.check_release.outputs.new_version }} already exists."
           fi
 
-      - name: Create GitHub Release
+      - name: Check if release exists
+        id: release_check
         if: steps.check_release.outputs.new_version
+        run: |
+          if gh release view ${{ steps.check_release.outputs.new_version }} >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check_release.outputs.new_version && steps.release_check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check_release.outputs.new_version }}
@@ -111,7 +123,6 @@ jobs:
           body: "Automated release for cloudflared-armv5 version ${{ steps.check_release.outputs.new_version }}"
           draft: false
           prerelease: false
-          overwrite: true
 
       - name: Prepare source archive
         if: steps.check_release.outputs.new_version
@@ -124,4 +135,4 @@ jobs:
         with:
           tag_name: ${{ steps.check_release.outputs.new_version }}
           files: cloudflared-armv5-${{ steps.check_release.outputs.new_version }}.zip
-          overwrite: true
+          fail_on_unmatched_files: false
