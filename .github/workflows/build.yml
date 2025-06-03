@@ -58,5 +58,5 @@ jobs:
           tags: |
             steerx/cloudflared-armv5:${{ steps.check_release.outputs.new_version }}
             steerx/cloudflared-armv5:latest
-        build-args:
-          CLOUDFLARED_VERSION: ${{ steps.check_release.outputs.new_version }}
+          build-args: # Correct placement under 'with'
+            CLOUDFLARED_VERSION: ${{ steps.check_release.outputs.new_version }}
