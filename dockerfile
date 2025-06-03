@@ -26,11 +26,15 @@ ENV GOPATH=/go
 ENV GO111MODULE=on
 ENV GOPROXY=https://proxy.golang.org,direct
 
+# Use a build argument to specify the cloudflared version
+ARG CLOUDFLARED_VERSION=master
+
 RUN git clone https://github.com/cloudflare/cloudflared.git /cloudflared
 
 WORKDIR /cloudflared
 
-RUN git checkout master
+# Checkout the specified version
+RUN git checkout $CLOUDFLARED_VERSION
 
 RUN go mod download
 
