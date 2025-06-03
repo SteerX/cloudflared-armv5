@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Download the Go tarball
 COPY go1.22-armv5.tar.gz /tmp/
 
 RUN mkdir -p /usr/local/go && \
@@ -35,6 +36,9 @@ WORKDIR /cloudflared
 
 # Checkout the specified version
 RUN git checkout $CLOUDFLARED_VERSION
+
+# Ensure Go is executable
+RUN chmod +x /usr/local/go/bin/go
 
 RUN go mod download
 
