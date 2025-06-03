@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Download the Go tarball
+# Use locally built Go tarball
 COPY go1.22-armv5.tar.gz /tmp/
 
 RUN mkdir -p /usr/local/go && \
