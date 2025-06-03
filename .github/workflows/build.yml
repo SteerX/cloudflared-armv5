@@ -82,3 +82,31 @@ jobs:
           git add latest_version.txt
           git commit -m "ci: update latest_version.txt to ${{ steps.check_release.outputs.new_version }}"
           git push
+
+      - name: Create tag for release
+        if: steps.check_release.outputs.new_version
+        run: |
+          git tag ${{ steps.check_release.outputs.new_version }}
+          git push origin ${{ steps.check_release.outputs.new_version }}
+
+      - name: Create GitHub Release
+        if: steps.check_release.outputs.new_version
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check_release.outputs.new_version }}
+          name: "cloudflared ${{ steps.check_release.outputs.new_version }}"
+          body: "Automated release for cloudflared version ${{ steps.check_release.outputs.new_version }}"
+          draft: false
+          prerelease: false
+
+      - name: Prepare source archive
+        if: steps.check_release.outputs.new_version
+        run: |
+          git archive --format=zip --output=cloudflared-${{ steps.check_release.outputs.new_version }}.zip HEAD
+
+      - name: Upload source archive to release
+        if: steps.check_release.outputs.new_version
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check_release.outputs.new_version }}
+          files: cloudflared-${{ steps.check_release.outputs.new_version }}.zip
