@@ -5,6 +5,9 @@ on:
     - cron: '0 0 * * *' # This runs the workflow daily at midnight
   workflow_dispatch: # Allows manual triggering
 
+permissions:
+  contents: write
+
 jobs:
   check_and_build:
     runs-on: ubuntu-latest
@@ -34,8 +37,6 @@ jobs:
 
           if latest_version != current_version:
               print(f'::set-output name=new_version::{latest_version}')
-              with open('latest_version.txt', 'w') as f:
-                  f.write(latest_version)
           else:
               print('No new version found.')
           EOF
@@ -44,10 +45,9 @@ jobs:
         run: |
           curl -L -o go1.22-armv5.tar.gz https://github.com/SteerX/cloudflared-armv5/releases/download/init/go1.22-armv5.tar.gz
 
-      # --- FIX: Enable QEMU for ARM emulation in Buildx ---
+      # Enable QEMU for ARM emulation in Buildx
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      # ----------------------------------------------------
 
       - name: Set up Docker Buildx
         if: steps.check_release.outputs.new_version
@@ -72,3 +72,13 @@ jobs:
           build-args: |
             CLOUDFLARED_VERSION=${{ steps.check_release.outputs.new_version }}
           platforms: linux/arm/v5
+
+      - name: Update latest_version.txt and push to repo
+        if: steps.check_release.outputs.new_version
+        run: |
+          echo "${{ steps.check_release.outputs.new_version }}" > latest_version.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add latest_version.txt
+          git commit -m "ci: update latest_version.txt to ${{ steps.check_release.outputs.new_version }}"
+          git push
