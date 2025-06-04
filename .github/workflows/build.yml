@@ -84,20 +84,24 @@ jobs:
 
       - name: Update latest_version.txt and push to repo
         if: steps.check_release.outputs.new_version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "${{ steps.check_release.outputs.new_version }}" > latest_version.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add latest_version.txt
           git commit -m "ci: update latest_version.txt to ${{ steps.check_release.outputs.new_version }}"
-          git push
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:${GITHUB_REF}
 
       - name: Create tag for release
         if: steps.check_release.outputs.new_version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if ! git rev-parse ${{ steps.check_release.outputs.new_version }} >/dev/null 2>&1; then
             git tag ${{ steps.check_release.outputs.new_version }}
-            git push origin ${{ steps.check_release.outputs.new_version }}
+            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ${{ steps.check_release.outputs.new_version }}
           else
             echo "Tag ${{ steps.check_release.outputs.new_version }} already exists."
           fi
