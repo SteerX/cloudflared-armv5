@@ -57,10 +57,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-arm-linux-gnueabi curl git tar
 
-      - name: Build Go ARMv5 toolchain (if needed)
+      - name: Build Go ARMv5 toolchain (auto Go version)
         if: steps.check_release.outputs.new_version
         run: |
           bash build-cloudflared-armv5.sh
+
+      - name: Get Go toolchain tarball name
+        if: steps.check_release.outputs.new_version
+        id: go_tarball
+        run: |
+          CLOUDFLARED_REPO_URL="https://github.com/cloudflare/cloudflared.git"
+          CLOUDFLARED_TMP_DIR="cloudflared-upstream-tmp"
+          GO_MOD_VERSION_LINE=$(grep '^go ' "$CLOUDFLARED_TMP_DIR/go.mod" | awk '{print $2}')
+          if [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+)$ ]]; then
+            GO_MAJOR_MINOR="${BASH_REMATCH[1]}"
+            GO_FULL_VERSION="${GO_MAJOR_MINOR}.0"
+          elif [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            GO_FULL_VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "Could not parse Go version from cloudflared upstream go.mod"
+            exit 1
+          fi
+          echo "go_toolchain_tarball=go${GO_FULL_VERSION}-armv5.tar.gz" >> $GITHUB_OUTPUT
 
       - name: Login to Docker Hub
         if: steps.check_release.outputs.new_version
@@ -80,6 +98,7 @@ jobs:
             steerx/cloudflared-armv5:latest
           build-args: |
             CLOUDFLARED_VERSION=${{ steps.check_release.outputs.new_version }}
+            GO_TOOLCHAIN_TARBALL=${{ steps.go_tarball.outputs.go_toolchain_tarball }}
           platforms: linux/arm/v5
 
       - name: Update latest_version.txt and push to repo
