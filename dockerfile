@@ -11,9 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the Go toolchain built for ARMv5, with version auto-detected by build script
-# The filename is now dynamic, so use a build ARG to pass it in
+# Use build ARGs for toolchain tarball and cloudflared version
 ARG GO_TOOLCHAIN_TARBALL
+ARG CLOUDFLARED_VERSION=latest
+
 COPY ${GO_TOOLCHAIN_TARBALL} /tmp/
 
 RUN mkdir -p /usr/local/go && \
@@ -29,9 +30,6 @@ ENV PATH=$GOROOT/bin:$PATH
 ENV GOPATH=/go
 ENV GO111MODULE=on
 ENV GOPROXY=https://proxy.golang.org,direct
-
-# Use a build argument to specify the cloudflared version
-ARG CLOUDFLARED_VERSION=master
 
 RUN git clone https://github.com/cloudflare/cloudflared.git /cloudflared
 
