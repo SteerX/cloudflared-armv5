@@ -8,7 +8,7 @@ set -euo pipefail
 # If not specified, defaults to latest upstream tag
 # Multi-stage Go bootstrap build for ARMv5 toolchain
 # 1. Uses Go 1.20.7 binary to bootstrap Go 1.22.6 (amd64)
-# 2. Uses Go 1.22.6 to bootstrap the required Go version for ARMv5
+# 2. Uses Go 1.22.6 to bootstrap the required Go version for ARMv5 (scraped from upstream cloudflared config)
 # 3. Packages the resulting toolchain for Docker
 
 # Step 0: Get the required cloudflared version and Go version
@@ -32,22 +32,49 @@ echo "Building for cloudflared version: $CLOUDFLARED_VERSION"
 rm -rf "$CLOUDFLARED_TMP_DIR"
 git clone --depth 1 --branch "$CLOUDFLARED_VERSION" "$CLOUDFLARED_REPO_URL" "$CLOUDFLARED_TMP_DIR"
 
-# Parse go.mod for the Go version (e.g., "go 1.24" or "go 1.24.2")
-GO_MOD_VERSION_LINE=$(grep '^go ' "$CLOUDFLARED_TMP_DIR/go.mod" | awk '{print $2}')
-if [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+)$ ]]; then
-  GO_FULL_VERSION="${BASH_REMATCH[1]}.0"
-elif [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-  GO_FULL_VERSION="${BASH_REMATCH[1]}"
+# --- Updated version scraping logic below ---
+
+# Try to extract the "go-boring" version from cfsetup.yaml if present, otherwise fallback to go.mod
+CFSETUP_YAML="$CLOUDFLARED_TMP_DIR/cfsetup.yaml"
+if [ -f "$CFSETUP_YAML" ]; then
+  # Try to extract the go-boring version, fallback to normal go version if not found.
+  GO_BORING_VERSION_LINE=$(grep '^pinned_go:' "$CFSETUP_YAML" | grep -oE "[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?")
+  if [ -n "${GO_BORING_VERSION_LINE:-}" ]; then
+    # Handle optional "-1" suffix, strip it for Go upstream
+    GO_FULL_VERSION=$(echo "$GO_BORING_VERSION_LINE" | sed 's/-.*//')
+    echo "Detected Go version from cfsetup.yaml: $GO_FULL_VERSION"
+  else
+    # Fallback: parse go.mod for the Go version (e.g., "go 1.24" or "go 1.24.2")
+    GO_MOD_VERSION_LINE=$(grep '^go ' "$CLOUDFLARED_TMP_DIR/go.mod" | awk '{print $2}')
+    if [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+)$ ]]; then
+      GO_FULL_VERSION="${BASH_REMATCH[1]}.0"
+    elif [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+      GO_FULL_VERSION="${BASH_REMATCH[1]}"
+    else
+      echo "Could not parse Go version from cloudflared upstream go.mod"
+      exit 1
+    fi
+    echo "Detected Go version from go.mod: $GO_FULL_VERSION"
+  fi
 else
-  echo "Could not parse Go version from cloudflared upstream go.mod"
-  exit 1
+  # Fallback: parse go.mod if cfsetup.yaml missing (should not happen)
+  GO_MOD_VERSION_LINE=$(grep '^go ' "$CLOUDFLARED_TMP_DIR/go.mod" | awk '{print $2}')
+  if [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+)$ ]]; then
+    GO_FULL_VERSION="${BASH_REMATCH[1]}.0"
+  elif [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+    GO_FULL_VERSION="${BASH_REMATCH[1]}"
+  else
+    echo "Could not parse Go version from cloudflared upstream go.mod"
+    exit 1
+  fi
+  echo "Detected Go version from go.mod: $GO_FULL_VERSION"
 fi
 
 GO_VERSION="go${GO_FULL_VERSION}"
 GO_SRC_TAG="go${GO_FULL_VERSION}"
 GO_TARBALL="go${GO_FULL_VERSION}-armv5.tar.gz"
 
-echo "Detected required Go version: $GO_VERSION"
+echo "Using required Go version: $GO_VERSION"
 
 # --- Stage 0: Download Go 1.20.7 binary as initial bootstrap ---
 BOOTSTRAP0_GO_VERSION="go1.20.7"
