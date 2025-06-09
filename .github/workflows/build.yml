@@ -29,13 +29,10 @@ jobs:
           python - <<EOF
           import requests
           import os
-
           response = requests.get('https://api.github.com/repos/cloudflare/cloudflared/releases/latest')
           latest_version = response.json()['tag_name']
-
           with open('latest_version.txt', 'r') as f:
               current_version = f.read().strip()
-
           if latest_version != current_version:
               with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
                   print(f'new_version={latest_version}', file=gh_out)
@@ -57,12 +54,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-arm-linux-gnueabi curl git tar
 
-      - name: Build Go ARMv5 toolchain (auto Go version)
+      - name: Build Go ARMv5 toolchain (multi-stage bootstrap, auto Go version)
         if: steps.check_release.outputs.new_version
         run: |
-          CLOUDFLARED_VERSION="${{ steps.check_release.outputs.new_version }}"
-          export CLOUDFLARED_VERSION
-          bash build-cloudflared-armv5.sh "$CLOUDFLARED_VERSION"
+          bash build-cloudflared-armv5.sh "${{ steps.check_release.outputs.new_version }}"
 
       - name: Get Go toolchain tarball name
         if: steps.check_release.outputs.new_version
