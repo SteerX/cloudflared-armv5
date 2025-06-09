@@ -60,7 +60,9 @@ jobs:
       - name: Build Go ARMv5 toolchain (auto Go version)
         if: steps.check_release.outputs.new_version
         run: |
-          bash build-cloudflared-armv5.sh
+          CLOUDFLARED_VERSION="${{ steps.check_release.outputs.new_version }}"
+          export CLOUDFLARED_VERSION
+          bash build-cloudflared-armv5.sh "$CLOUDFLARED_VERSION"
 
       - name: Get Go toolchain tarball name
         if: steps.check_release.outputs.new_version
@@ -70,8 +72,7 @@ jobs:
           CLOUDFLARED_TMP_DIR="cloudflared-upstream-tmp"
           GO_MOD_VERSION_LINE=$(grep '^go ' "$CLOUDFLARED_TMP_DIR/go.mod" | awk '{print $2}')
           if [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+)$ ]]; then
-            GO_MAJOR_MINOR="${BASH_REMATCH[1]}"
-            GO_FULL_VERSION="${GO_MAJOR_MINOR}.0"
+            GO_FULL_VERSION="${BASH_REMATCH[1]}.0"
           elif [[ "$GO_MOD_VERSION_LINE" =~ ^([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
             GO_FULL_VERSION="${BASH_REMATCH[1]}"
           else
