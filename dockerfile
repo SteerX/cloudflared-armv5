@@ -11,15 +11,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Use locally built Go tarball
-COPY go1.22-armv5.tar.gz /tmp/
+# Copy the Go toolchain built for ARMv5, with version auto-detected by build script
+# The filename is now dynamic, so use a build ARG to pass it in
+ARG GO_TOOLCHAIN_TARBALL
+COPY ${GO_TOOLCHAIN_TARBALL} /tmp/
 
 RUN mkdir -p /usr/local/go && \
-    tar -C /usr/local/go -xzf /tmp/go1.22-armv5.tar.gz && \
-    # Unconditionally move binaries from linux_arm subfolder to bin, overwriting existing files
-    mv -f /usr/local/go/bin/linux_arm/* /usr/local/go/bin/ && \
-    rmdir /usr/local/go/bin/linux_arm && \
-    rm /tmp/go1.22-armv5.tar.gz
+    tar -C /usr/local/go -xzf /tmp/${GO_TOOLCHAIN_TARBALL} && \
+    if [ -d /usr/local/go/bin/linux_arm ]; then \
+      mv -f /usr/local/go/bin/linux_arm/* /usr/local/go/bin/ && \
+      rmdir /usr/local/go/bin/linux_arm; \
+    fi && \
+    rm /tmp/${GO_TOOLCHAIN_TARBALL}
 
 ENV GOROOT=/usr/local/go
 ENV PATH=$GOROOT/bin:$PATH
