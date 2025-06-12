@@ -138,3 +138,8 @@ echo "Go toolchain build complete: $GO_TARBALL"
 
 echo "Toolchain tarball ready: $(realpath "$GO_TARBALL")"
 echo "You can now use this tarball in your Docker build."
+
+# ---- Output Go version and tarball name for CI/CD ----
+echo "GO_FULL_VERSION=$GO_FULL_VERSION" > toolchain-meta.env
+echo "GO_TARBALL=$GO_TARBALL" >> toolchain-meta.env
+echo "Wrote Go version and tarball name to toolchain-meta.env"
