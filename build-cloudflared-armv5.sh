@@ -132,7 +132,7 @@ cd ..
 cd ..
 echo "Step 4: Package built Go toolchain"
 rm -f "$GO_TARBALL"
-tar czf "$GO_TARBALL" go-src
+tar czf "$GO_TARBALL" -C go-src .
 
 echo "Go toolchain build complete: $GO_TARBALL"
 
