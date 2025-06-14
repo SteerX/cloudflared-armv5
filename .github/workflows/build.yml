@@ -148,3 +148,4 @@ jobs:
           tag_name: ${{ steps.check_release.outputs.new_version }}
           files: cloudflared-armv5-${{ steps.check_release.outputs.new_version }}.zip
           fail_on_unmatched_files: false
+          update_existing: true
