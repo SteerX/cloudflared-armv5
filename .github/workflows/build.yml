@@ -29,15 +29,37 @@ jobs:
           python - <<EOF
           import requests
           import os
-          response = requests.get('https://api.github.com/repos/cloudflare/cloudflared/releases/latest')
-          latest_version = response.json()['tag_name']
-          with open('latest_version.txt', 'r') as f:
-              current_version = f.read().strip()
-          if latest_version != current_version:
-              with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
-                  print(f'new_version={latest_version}', file=gh_out)
-          else:
-              print('No new version found.')
+          import sys
+
+          try:
+              response = requests.get(
+                  'https://api.github.com/repos/cloudflare/cloudflared/releases/latest',
+                  timeout=10
+              )
+              if response.status_code != 200:
+                  print(f"GitHub API error: {response.status_code} - {response.text}", file=sys.stderr)
+                  sys.exit(0)  # Gracefully skip if API error
+
+              data = response.json()
+              latest_version = data.get('tag_name')
+              if not latest_version:
+                  print(f'Error: \"tag_name\" not found in response. Response: {data}', file=sys.stderr)
+                  sys.exit(0)  # Gracefully skip if tag_name missing
+
+              try:
+                  with open('latest_version.txt', 'r') as f:
+                      current_version = f.read().strip()
+              except FileNotFoundError:
+                  current_version = ""
+
+              if latest_version != current_version:
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as gh_out:
+                      print(f'new_version={latest_version}', file=gh_out)
+              else:
+                  print('No new version found.')
+          except Exception as e:
+              print(f"Exception occurred: {e}", file=sys.stderr)
+              sys.exit(0)  # Gracefully skip on any exception
           EOF
 
       # Enable QEMU for ARM emulation in Buildx
