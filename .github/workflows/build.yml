@@ -25,26 +25,34 @@ jobs:
 
       - name: Check for new cloudflared release
         id: check_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python - <<EOF
           import requests
           import os
           import sys
 
+          headers = {
+              "Authorization": f"Bearer {os.environ.get('GITHUB_TOKEN')}",
+              "Accept": "application/vnd.github+json"
+          }
+
           try:
               response = requests.get(
                   'https://api.github.com/repos/cloudflare/cloudflared/releases/latest',
+                  headers=headers,
                   timeout=10
               )
               if response.status_code != 200:
-                  print(f"GitHub API error: {response.status_code} - {response.text}", file=sys.stderr)
-                  sys.exit(0)  # Gracefully skip if API error
+                  print(f"::warning::GitHub API error: {response.status_code} - {response.text}", file=sys.stderr)
+                  sys.exit(0)  # Exit with warning, do not fail workflow
 
               data = response.json()
               latest_version = data.get('tag_name')
               if not latest_version:
-                  print(f'Error: \"tag_name\" not found in response. Response: {data}', file=sys.stderr)
-                  sys.exit(0)  # Gracefully skip if tag_name missing
+                  print(f'::warning::"tag_name" not found in response. Response: {data}', file=sys.stderr)
+                  sys.exit(0)  # Exit with warning, do not fail workflow
 
               try:
                   with open('latest_version.txt', 'r') as f:
@@ -58,8 +66,8 @@ jobs:
               else:
                   print('No new version found.')
           except Exception as e:
-              print(f"Exception occurred: {e}", file=sys.stderr)
-              sys.exit(0)  # Gracefully skip on any exception
+              print(f"::warning::Exception occurred: {e}", file=sys.stderr)
+              sys.exit(0)  # Exit with warning, do not fail workflow
           EOF
 
       # Enable QEMU for ARM emulation in Buildx
