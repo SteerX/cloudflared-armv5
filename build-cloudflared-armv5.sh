@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+# Debug helpers: print each command and show the failing command + line on error
+set -x
+trap 'rc=$?; echo ">>> ERROR: command \"${BASH_COMMAND}\" failed with exit $rc at line ${LINENO}"; exit $rc' ERR
+
 # Usage:
 #   CLOUDFLARED_VERSION=<tag_or_branch> ./build-cloudflared-armv5.sh
 #   or
@@ -62,7 +66,7 @@ git clone --no-checkout --depth 1 "$CLOUDFLARED_REPO_URL" "$CLOUDFLARED_TMP_DIR"
 # DIAGNOSTICS: print repo state to help CI debugging
 # (kept separate so it won't interfere with normal flow unless CI fails)
 echo "=== DIAGNOSTICS: upstream repo state ==="
-echo "pwd: $(pwd)"
+echo "pwd: "+(pwd)"
 # Show current HEAD info for the cloned repo
 git -C "$CLOUDFLARED_TMP_DIR" show --no-patch --format='%H %an %ad %D' HEAD || true
 # List tags available locally
