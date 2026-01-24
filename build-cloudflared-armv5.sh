@@ -66,7 +66,7 @@ git clone --no-checkout --depth 1 "$CLOUDFLARED_REPO_URL" "$CLOUDFLARED_TMP_DIR"
 # DIAGNOSTICS: print repo state to help CI debugging
 # (kept separate so it won't interfere with normal flow unless CI fails)
 echo "=== DIAGNOSTICS: upstream repo state ==="
-echo "pwd: "+(pwd)"
+echo "pwd: $(pwd)"
 # Show current HEAD info for the cloned repo
 git -C "$CLOUDFLARED_TMP_DIR" show --no-patch --format='%H %an %ad %D' HEAD || true
 # List tags available locally
@@ -144,7 +144,7 @@ git clone --depth 1 --branch "$STAGE1_GO_VERSION" https://go.googlesource.com/go
 
 echo "Step 2: Build Go $STAGE1_GO_VERSION for amd64 using bootstrap0"
 export GOROOT_BOOTSTRAP="$(pwd)/go-bootstrap0"
-export PATH="$GOROOT_BOOTSTRAP/bin:$PATH"
+export PATH="$GOROOT_BOOTSTRAP/bin:">$PATH"
 cd "$STAGE1_GO_SRC_DIR/src"
 GOOS=linux GOARCH=amd64 ./make.bash
 cd ../..
@@ -159,7 +159,7 @@ git fetch --all --tags
 if git rev-parse "$GO_SRC_TAG" >/dev/null 2>&1; then
   git checkout "$GO_SRC_TAG"
 else
-  GO_SRC_TAG_MINOR=$(echo "$GO_FULL_VERSION" | awk -F. '{print "go"$1"."$2}')
+  GO_SRC_TAG_MINOR=$(echo "$GO_FULL_VERSION" | awk -F. '{print "go"$1.""$2}')
   if git rev-parse "$GO_SRC_TAG_MINOR" >/dev/null 2>&1; then
     git checkout "$GO_SRC_TAG_MINOR"
   else
