@@ -59,6 +59,21 @@ git clone --no-checkout --depth 1 "$CLOUDFLARED_REPO_URL" "$CLOUDFLARED_TMP_DIR"
   fi
 )
 
+# DIAGNOSTICS: print repo state to help CI debugging
+# (kept separate so it won't interfere with normal flow unless CI fails)
+echo "=== DIAGNOSTICS: upstream repo state ==="
+echo "pwd: $(pwd)"
+# Show current HEAD info for the cloned repo
+git -C "$CLOUDFLARED_TMP_DIR" show --no-patch --format='%H %an %ad %D' HEAD || true
+# List tags available locally
+git -C "$CLOUDFLARED_TMP_DIR" show-ref --tags || true
+# List top-level files to ensure go.mod/cfsetup.yaml exist
+ls -la "$CLOUDFLARED_TMP_DIR" || true
+# Show heads of go.mod and cfsetup.yaml if present
+[ -f "$CLOUDFLARED_TMP_DIR/go.mod" ] && echo "--- go.mod (head) ---" && head -n 20 "$CLOUDFLARED_TMP_DIR/go.mod" || echo "no go.mod"
+[ -f "$CLOUDFLARED_TMP_DIR/cfsetup.yaml" ] && echo "--- cfsetup.yaml (head) ---" && head -n 20 "$CLOUDFLARED_TMP_DIR/cfsetup.yaml" || echo "no cfsetup.yaml"
+echo "=== END DIAGNOSTICS ==="
+
 # --- Updated version scraping logic below ---
 
 # Try to extract the "go-boring" version from cfsetup.yaml if present, otherwise fallback to go.mod
