@@ -30,7 +30,34 @@ echo "Building for cloudflared version: $CLOUDFLARED_VERSION"
 
 # Step 1: Prepare/clone the cloudflared repo at the desired tag
 rm -rf "$CLOUDFLARED_TMP_DIR"
-git clone --depth 1 --branch "$CLOUDFLARED_VERSION" "$CLOUDFLARED_REPO_URL" "$CLOUDFLARED_TMP_DIR"
+
+# Robust clone that handles annotated tags and shallow environments:
+# 1) shallow clone without checkout
+# 2) try to fetch the specific tag (including dereferenced commit for annotated tags)
+# 3) resolve tag^{commit} and checkout the commit; if that fails, try to checkout the ref directly
+git clone --no-checkout --depth 1 "$CLOUDFLARED_REPO_URL" "$CLOUDFLARED_TMP_DIR"
+(
+  cd "$CLOUDFLARED_TMP_DIR"
+
+  # Try to fetch the specific tag (this will create a refs/tags/<tag> and the deref refs/tags/<tag>^{})
+  # If that fails (some remotes don't allow fetching single refs with depth), fall back to fetching tags
+  if ! git fetch --depth 1 origin "refs/tags/$CLOUDFLARED_VERSION:refs/tags/$CLOUDFLARED_VERSION" 2>/dev/null; then
+    git fetch --tags --depth 1 origin || git fetch --tags origin
+  fi
+
+  # Try to resolve the tag to a commit (handles annotated tags)
+  if commit_sha=$(git rev-parse --verify --quiet "refs/tags/$CLOUDFLARED_VERSION^{commit}" 2>/dev/null); then
+    git checkout "$commit_sha"
+  else
+    # Fallback: try to checkout branch or lightweight tag by name
+    if git rev-parse --verify --quiet "$CLOUDFLARED_VERSION" >/dev/null 2>&1; then
+      git checkout "$CLOUDFLARED_VERSION"
+    else
+      echo "Error: Could not resolve or checkout '$CLOUDFLARED_VERSION' (not found as tag, annotated-tag, or branch)"
+      exit 1
+    fi
+  fi
+)
 
 # --- Updated version scraping logic below ---
 
@@ -128,7 +155,6 @@ export PATH="$GOROOT_BOOTSTRAP/bin:$PATH"
 cd src
 GOOS=linux GOARCH=arm GOARM=5 ./make.bash
 cd ..
-
 cd ..
 echo "Step 4: Package built Go toolchain"
 rm -f "$GO_TARBALL"
