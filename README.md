@@ -29,7 +29,7 @@ This guide outlines a robust, multi-stage Docker build process to create a Cloud
   Official Go binaries for ARMv5 are not readily available for the latest Go versions. Building Go 1.22 from source ensures compatibility and access to the latest language features required by Cloudflared.
 
 - **How?**  
-  - Use a bootstrap Go compiler (e.g., Go 1.20.7) on an amd64 host to build Go 1.22 for ARMv5.
+  - Use a bootstrap Go compiler (e.g., Go 1.20.7) on an amd64 host to build Go 1.22 for ARMv5 (or currently used version for build the project).
   - Package the full Go distribution (including `bin/`, `src/`, and `pkg/` directories) into a tarball (`go1.22-armv5.tar.gz`).
   - Ensure the tarball structure matches Go’s expected layout for seamless integration.
 
