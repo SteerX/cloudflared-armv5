@@ -10,8 +10,9 @@ set -euo pipefail
 
 # Multi-stage Go bootstrap build for ARMv5 toolchain
 # 1. Uses Go 1.20.7 binary to bootstrap Go 1.22.6 (amd64)
-# 2. Uses Go 1.22.6 to bootstrap the required Go version for ARMv5 (scraped from upstream cloudflared config)
-# 3. Packages the resulting toolchain for Docker
+# 2. Uses Go 1.22.6 to bootstrap Go 1.24.6 (amd64)
+# 3. Uses Go 1.24.6 to bootstrap the required Go version for ARMv5 (scraped from upstream cloudflared config)
+# 4. Packages the resulting toolchain for Docker
 
 # Step 0: Get the required cloudflared version and Go version
 
@@ -107,7 +108,22 @@ cd "$STAGE1_GO_SRC_DIR/src"
 GOOS=linux GOARCH=amd64 ./make.bash
 cd ../..
 
-# --- Stage 2: Build Go $GO_VERSION for ARMv5 using Go 1.22.6 (stage1) ---
+# --- Stage 1.5: Build Go 1.24.6 from source using Go 1.22.6 (stage1) ---
+STAGE1_5_GO_VERSION="go1.24.6"
+STAGE1_5_GO_SRC_DIR="go-src-stage1-5"
+
+rm -rf "$STAGE1_5_GO_SRC_DIR"
+git clone --depth 1 --branch "$STAGE1_5_GO_VERSION" https://go.googlesource.com/go "$STAGE1_5_GO_SRC_DIR"
+
+echo "Step 2.5: Build Go $STAGE1_5_GO_VERSION for amd64 using stage1 (Go 1.22.6)"
+export GOROOT_BOOTSTRAP="$(pwd)/$STAGE1_GO_SRC_DIR"
+export PATH="$GOROOT_BOOTSTRAP/bin:$PATH"
+
+cd "$STAGE1_5_GO_SRC_DIR/src"
+GOOS=linux GOARCH=amd64 ./make.bash
+cd ../..
+
+# --- Stage 2: Build Go $GO_VERSION for ARMv5 using Go 1.24.6 (stage1.5) ---
 GO_SRC_DIR="go-src"
 
 rm -rf "$GO_SRC_DIR"
@@ -128,8 +144,8 @@ else
   fi
 fi
 
-echo "Step 3: Build Go $GO_VERSION for linux/arm (ARMv5) using stage1 Go"
-export GOROOT_BOOTSTRAP="$(pwd)/../$STAGE1_GO_SRC_DIR"
+echo "Step 3: Build Go $GO_VERSION for linux/arm (ARMv5) using stage1.5 Go (Go 1.24.6)"
+export GOROOT_BOOTSTRAP="$(pwd)/../$STAGE1_5_GO_SRC_DIR"
 export PATH="$GOROOT_BOOTSTRAP/bin:$PATH"
 
 cd src
